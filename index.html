@@ -2,12 +2,228 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Guru Coffee</title>
+  <meta name="theme-color" content="#111" />
   <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <style>
+    :root { --bg:#0f0f10; --card:#17181a; --text:#fff; --muted:#9aa0a6; --brand:#eab308; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Arial}
+    header{position:sticky;top:0;backdrop-filter:saturate(1.2) blur(10px);background:#0f0f10cc}
+    .bar{display:flex;align-items:center;gap:.75rem;padding:.9rem 1rem;border-bottom:1px solid #222}
+    .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#222,#333)}
+    h1{font-size:1.1rem;margin:0} .muted{color:var(--muted);font-size:.9rem}
+    nav{display:flex;gap:.5rem;padding:.5rem 1rem 1rem;flex-wrap:wrap}
+    nav button{padding:.55rem .8rem;border-radius:999px;border:1px solid #2a2b2f;background:var(--card);color:#fff;cursor:pointer}
+    nav button.active{border-color:var(--brand);box-shadow:0 0 0 2px #000 inset;color:#111;background:var(--brand)}
+    .wrap{max-width:900px;margin:0 auto;padding:1rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
+    .card{background:var(--card);border:1px solid #222;border-radius:16px;padding:1rem}
+    .card h3{margin:.2rem 0 .4rem} .price{color:var(--brand);font-weight:700}
+    .badge{display:inline-block;border:1px dashed #444;color:var(--muted);padding:.2rem .5rem;border-radius:999px;font-size:.8rem}
+    .loyal{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.5rem 0}
+    .stamp{width:26px;height:26px;border-radius:50%;border:2px solid #333;display:grid;place-items:center;font-size:.8rem}
+    .stamp.on{background:var(--brand);color:#111;border-color:transparent}
+    .row{display:flex;gap:.6rem;flex-wrap:wrap;margin:.6rem 0}
+    input,select,button{border-radius:10px;border:1px solid #2a2b2f;background:#111;color:#fff;padding:.65rem .75rem}
+    button.cta{background:var(--brand);color:#111;border:none;font-weight:700;cursor:pointer}
+    footer{opacity:.7;text-align:center;padding:2rem 1rem}
+    a{color:var(--brand);text-decoration:none}
+  </style>
 </head>
 <body>
-  <h1>Guru Coffee App</h1>
-  <p>Це демо-версія застосунку для кав'ярні Guru Coffee ☕</p>
+<header>
+  <div class="bar">
+    <div class="logo"></div>
+    <div>
+      <h1>Guru Coffee</h1>
+      <div class="muted">Кавове меню • Бонуси • Акції</div>
+    </div>
+  </div>
+  <nav>
+    <button data-tab="menu" class="active">Меню</button>
+    <button data-tab="loyalty">Бонуси</button>
+    <button data-tab="promo">Акції</button>
+    <button data-tab="contact">Контакти</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section id="menu" class="tab">
+    <div class="row">
+      <select id="location"></select>
+      <input id="search" placeholder="Пошук в меню…" />
+    </div>
+    <div id="menuGrid" class="grid"></div>
+  </section>
+
+  <section id="loyalty" class="tab" hidden>
+    <div class="card">
+      <h3>Карта штампів (9+1 безкоштовно)</h3>
+      <div class="loyal" id="stamps"></div>
+      <div class="row">
+        <input id="stampCode" placeholder="Код штампу від бариста" />
+        <button class="cta" id="addStamp">Додати штамп</button>
+      </div>
+      <div class="muted" id="loyalMsg"></div>
+    </div>
+  </section>
+
+  <section id="promo" class="tab" hidden>
+    <div class="grid" id="promoGrid"></div>
+  </section>
+
+  <section id="contact" class="tab" hidden>
+    <div class="card">
+      <h3>Локації</h3>
+      <div id="locList"></div>
+      <div class="row">
+        <a id="tgOrder" class="badge" href="#" target="_blank">Замовити у Telegram</a>
+        <a id="maps" class="badge" href="#" target="_blank">Відкрити в Google Maps</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>© Guru Coffee • З любов’ю до кави ☕</footer>
+
+<script>
+/** ======= ДАНІ: редагуй під свою мережу ======= **/
+const DATA = {
+  loyalty: { total: 10, secret: "GURU2025" }, // змінити код штампа
+  locations: [
+    { id:"sumy-center", name:"Суми • Центр", maps:"https://maps.google.com", tg:"https://t.me/your_bot" },
+    { id:"sumy-mall", name:"Суми • ТРЦ", maps:"https://maps.google.com", tg:"https://t.me/your_bot" }
+  ],
+  menu: [
+    { id:"cap", title:"Капучіно", price:75, tags:["молочна"], spot:["sumy-center","sumy-mall"] },
+    { id:"latte", title:"Лате", price:79, tags:["молочна"], spot:["sumy-center"] },
+    { id:"raf", title:"Раф Ванільний", price:95, tags:["солодка"], spot:["sumy-mall"] },
+    { id:"americano", title:"Американо", price:60, tags:["чорна"], spot:["sumy-center","sumy-mall"] },
+    { id:"tea-oolong", title:"Чай Ті Гуань Інь", price:70, tags:["чай"], spot:["sumy-center"] },
+  ],
+  promos: [
+    { title:"-20% з 8:00 до 9:00", text:"Ранкова кава вигідніше." },
+    { title:"2+1 у будні", text:"Третій напій — у подарунок для команди." }
+  ]
+};
+/** ======= СТЕЙТ ======= **/
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const state = {
+  location: localStorage.getItem("gc_location") || DATA.locations[0].id,
+  stamps: Number(localStorage.getItem("gc_stamps") || "0")
+};
+/** ======= ТАБИ ======= **/
+$$("nav button").forEach(btn=>{
+  btn.onclick=()=>{
+    $$(".tab").forEach(t=>t.hidden=true);
+    $(`#${btn.dataset.tab}`).hidden=false;
+    $$("nav button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+  };
+});
+/** ======= ЛОКАЦІЇ ======= **/
+const locSel = $("#location");
+DATA.locations.forEach(l=>{
+  const opt=document.createElement("option");
+  opt.value=l.id; opt.textContent=l.name;
+  if(l.id===state.location) opt.selected=true;
+  locSel.appendChild(opt);
+});
+locSel.onchange = e=>{
+  state.location=e.target.value;
+  localStorage.setItem("gc_location", state.location);
+  renderMenu(); renderContacts();
+};
+function renderContacts(){
+  const loc = DATA.locations.find(l=>l.id===state.location);
+  $("#locList").innerHTML = `<div class="muted">${loc.name}</div>`;
+  $("#tgOrder").href = loc.tg;
+  $("#maps").href = loc.maps;
+}
+renderContacts();
+/** ======= МЕНЮ ======= **/
+const grid = $("#menuGrid");
+function renderMenu(){
+  const q = $("#search").value?.toLowerCase() || "";
+  grid.innerHTML="";
+  DATA.menu
+    .filter(i=>i.spot.includes(state.location))
+    .filter(i=>i.title.toLowerCase().includes(q) || i.tags.join(" ").includes(q))
+    .forEach(item=>{
+      const el=document.createElement("div");
+      el.className="card";
+      el.innerHTML = `
+        <div class="badge">${item.tags.join(" • ")}</div>
+        <h3>${item.title}</h3>
+        <div class="price">${item.price} грн</div>
+        <div class="row">
+          <button class="cta" onclick="order('${item.id}')">Замовити</button>
+          <button onclick="share('${item.title}')">Поділитися</button>
+        </div>`;
+      grid.appendChild(el);
+    });
+}
+$("#search").oninput=renderMenu;
+renderMenu();
+/** ======= ЛОЯЛЬНІСТЬ ======= **/
+function renderStamps(){
+  const wrap = $("#stamps");
+  wrap.innerHTML="";
+  for(let i=0;i<DATA.loyalty.total;i++){
+    const d=document.createElement("div");
+    d.className="stamp"+(i<state.stamps?" on":"");
+    d.textContent = i<state.stamps ? "✓" : i+1;
+    wrap.appendChild(d);
+  }
+  const left = DATA.loyalty.total-1 - (state.stamps % (DATA.loyalty.total-1));
+  $("#loyalMsg").textContent = (state.stamps && state.stamps % (DATA.loyalty.total-1)===0)
+    ? "Наступний — безкоштовно!"
+    : `Залишилось до бонусу: ${left} штамп(и).`;
+}
+renderStamps();
+$("#addStamp").onclick=()=>{
+  const code = $("#stampCode").value.trim();
+  if(code===DATA.loyalty.secret){
+    state.stamps++;
+    localStorage.setItem("gc_stamps", String(state.stamps));
+    $("#stampCode").value="";
+    renderStamps();
+    alert("Штамп додано!");
+  }else{
+    alert("Невірний код штампу.");
+  }
+};
+/** ======= АКЦІЇ ======= **/
+function renderPromos(){
+  const pg = $("#promoGrid");
+  pg.innerHTML="";
+  DATA.promos.forEach(p=>{
+    const c=document.createElement("div");
+    c.className="card";
+    c.innerHTML=`<h3>${p.title}</h3><div class="muted">${p.text}</div>`;
+    pg.appendChild(c);
+  });
+}
+renderPromos();
+/** ======= ЗАМОВЛЕННЯ/ШЕРІНГ ======= **/
+function order(id){
+  const item = DATA.menu.find(m=>m.id===id);
+  const loc = DATA.locations.find(l=>l.id===state.location);
+  const msg = encodeURIComponent(`Замовлення: ${item.title} (${item.price} грн) • Локація: ${loc.name}`);
+  window.open(loc.tg + (loc.tg.includes("?")?"&":"?") + "start=" + msg, "_blank");
+}
+function share(title){
+  const text = `Рекомендую ${title} у Guru Coffee!`;
+  if(navigator.share){ navigator.share({title:"Guru Coffee", text, url:location.href}); }
+  else { prompt("Скопіюй текст:", text+" "+location.href); }
+}
+/** ======= РЕЄСТРАЦІЯ SW ======= **/
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"));
+}
+</script>
 </body>
 </html>

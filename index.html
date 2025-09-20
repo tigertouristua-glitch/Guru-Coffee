@@ -22,8 +22,8 @@
     .card{background:var(--card);border:1px solid #222;border-radius:16px;padding:1rem}
     .card h3{margin:.2rem 0 .4rem} .price{color:var(--brand);font-weight:700}
     .badge{display:inline-block;border:1px dashed #444;color:var(--muted);padding:.2rem .5rem;border-radius:999px;font-size:.8rem}
-    .loyal{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.5rem 0}
-    .stamp{width:26px;height:26px;border-radius:50%;border:2px solid #333;display:grid;place-items:center;font-size:.8rem}
+    .loyal{display:grid;grid-template-columns:repeat(7,28px);gap:.5rem;justify-content:flex-start;margin:.75rem 0}
+    .stamp{width:28px;height:28px;border-radius:50%;border:2px solid #333;display:grid;place-items:center;font-size:.8rem}
     .stamp.on{background:var(--brand);color:#111;border-color:transparent}
     .row{display:flex;gap:.6rem;flex-wrap:wrap;margin:.6rem 0}
     input,select,button{border-radius:10px;border:1px solid #2a2b2f;background:#111;color:#fff;padding:.65rem .75rem}
@@ -38,36 +38,36 @@
     <div class="logo"></div>
     <div>
       <h1>Guru Coffee</h1>
-      <div class="muted">Кавове меню • Бонуси • Акції</div>
+      <div class="muted">Карта штампів • 7+1 безкоштовно</div>
     </div>
   </div>
   <nav>
-    <button data-tab="menu" class="active">Меню</button>
-    <button data-tab="loyalty">Бонуси</button>
+    <button data-tab="loyalty" class="active">Бонуси</button>
+    <button data-tab="menu">Меню</button>
     <button data-tab="promo">Акції</button>
     <button data-tab="contact">Контакти</button>
   </nav>
 </header>
 
 <main class="wrap">
-  <section id="menu" class="tab">
-    <div class="row">
-      <select id="location"></select>
-      <input id="search" placeholder="Пошук в меню…" />
-    </div>
-    <div id="menuGrid" class="grid"></div>
-  </section>
-
-  <section id="loyalty" class="tab" hidden>
+  <section id="loyalty" class="tab">
     <div class="card">
-      <h3>Карта штампів (9+1 безкоштовно)</h3>
+      <h3>Карта штампів (7+1)</h3>
+      <div class="badge">Збирай 7 штампів — 8-й напій у подарунок</div>
       <div class="loyal" id="stamps"></div>
+      <div class="muted" id="loyalMsg"></div>
       <div class="row">
         <input id="stampCode" placeholder="Код штампу від бариста" />
         <button class="cta" id="addStamp">Додати штамп</button>
+        <button id="redeem" hidden>Отримати безкоштовний напій</button>
+        <button id="reset" title="Скинути лічильник">Скинути</button>
       </div>
-      <div class="muted" id="loyalMsg"></div>
+      <div class="muted">Порада: код змінюється адміністратором мережі.</div>
     </div>
+  </section>
+
+  <section id="menu" class="tab" hidden>
+    <div class="grid" id="menuGrid"></div>
   </section>
 
   <section id="promo" class="tab" hidden>
@@ -89,33 +89,29 @@
 <footer>© Guru Coffee • З любов’ю до кави ☕</footer>
 
 <script>
-/** ======= ДАНІ: редагуй під свою мережу ======= **/
 const DATA = {
-  loyalty: { total: 10, secret: "GURU2025" }, // змінити код штампа
+  loyalty: { required: 7, secret: "GURU2025" },
   locations: [
-    { id:"sumy-center", name:"Суми • Центр", maps:"https://maps.google.com", tg:"https://t.me/your_bot" },
-    { id:"sumy-mall", name:"Суми • ТРЦ", maps:"https://maps.google.com", tg:"https://t.me/your_bot" }
+    { id:"sumy-center", name:"Суми • Центр", maps:"https://maps.google.com", tg:"https://t.me/your_bot" }
   ],
   menu: [
-    { id:"cap", title:"Капучіно", price:75, tags:["молочна"], spot:["sumy-center","sumy-mall"] },
-    { id:"latte", title:"Лате", price:79, tags:["молочна"], spot:["sumy-center"] },
-    { id:"raf", title:"Раф Ванільний", price:95, tags:["солодка"], spot:["sumy-mall"] },
-    { id:"americano", title:"Американо", price:60, tags:["чорна"], spot:["sumy-center","sumy-mall"] },
-    { id:"tea-oolong", title:"Чай Ті Гуань Інь", price:70, tags:["чай"], spot:["sumy-center"] },
+    { id:"cap", title:"Капучіно", price:75, tags:["молочна"] },
+    { id:"latte", title:"Лате", price:79, tags:["молочна"] },
+    { id:"americano", title:"Американо", price:60, tags:["чорна"] },
+    { id:"raf", title:"Раф Ванільний", price:95, tags:["солодка"] }
   ],
   promos: [
     { title:"-20% з 8:00 до 9:00", text:"Ранкова кава вигідніше." },
     { title:"2+1 у будні", text:"Третій напій — у подарунок для команди." }
   ]
 };
-/** ======= СТЕЙТ ======= **/
+
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
 const state = {
-  location: localStorage.getItem("gc_location") || DATA.locations[0].id,
   stamps: Number(localStorage.getItem("gc_stamps") || "0")
 };
-/** ======= ТАБИ ======= **/
+
 $$("nav button").forEach(btn=>{
   btn.onclick=()=>{
     $$(".tab").forEach(t=>t.hidden=true);
@@ -124,68 +120,31 @@ $$("nav button").forEach(btn=>{
     btn.classList.add("active");
   };
 });
-/** ======= ЛОКАЦІЇ ======= **/
-const locSel = $("#location");
-DATA.locations.forEach(l=>{
-  const opt=document.createElement("option");
-  opt.value=l.id; opt.textContent=l.name;
-  if(l.id===state.location) opt.selected=true;
-  locSel.appendChild(opt);
-});
-locSel.onchange = e=>{
-  state.location=e.target.value;
-  localStorage.setItem("gc_location", state.location);
-  renderMenu(); renderContacts();
-};
-function renderContacts(){
-  const loc = DATA.locations.find(l=>l.id===state.location);
-  $("#locList").innerHTML = `<div class="muted">${loc.name}</div>`;
-  $("#tgOrder").href = loc.tg;
-  $("#maps").href = loc.maps;
-}
-renderContacts();
-/** ======= МЕНЮ ======= **/
-const grid = $("#menuGrid");
-function renderMenu(){
-  const q = $("#search").value?.toLowerCase() || "";
-  grid.innerHTML="";
-  DATA.menu
-    .filter(i=>i.spot.includes(state.location))
-    .filter(i=>i.title.toLowerCase().includes(q) || i.tags.join(" ").includes(q))
-    .forEach(item=>{
-      const el=document.createElement("div");
-      el.className="card";
-      el.innerHTML = `
-        <div class="badge">${item.tags.join(" • ")}</div>
-        <h3>${item.title}</h3>
-        <div class="price">${item.price} грн</div>
-        <div class="row">
-          <button class="cta" onclick="order('${item.id}')">Замовити</button>
-          <button onclick="share('${item.title}')">Поділитися</button>
-        </div>`;
-      grid.appendChild(el);
-    });
-}
-$("#search").oninput=renderMenu;
-renderMenu();
-/** ======= ЛОЯЛЬНІСТЬ ======= **/
+
 function renderStamps(){
   const wrap = $("#stamps");
   wrap.innerHTML="";
-  for(let i=0;i<DATA.loyalty.total;i++){
+  for(let i=0;i<DATA.loyalty.required;i++){
     const d=document.createElement("div");
     d.className="stamp"+(i<state.stamps?" on":"");
     d.textContent = i<state.stamps ? "✓" : i+1;
     wrap.appendChild(d);
   }
-  const left = DATA.loyalty.total-1 - (state.stamps % (DATA.loyalty.total-1));
-  $("#loyalMsg").textContent = (state.stamps && state.stamps % (DATA.loyalty.total-1)===0)
-    ? "Наступний — безкоштовно!"
+  const left = Math.max(0, DATA.loyalty.required - state.stamps);
+  const eligible = state.stamps >= DATA.loyalty.required;
+  $("#redeem").hidden = !eligible;
+  $("#loyalMsg").textContent = eligible
+    ? "Готово! Натисни «Отримати безкоштовний напій» на касі."
     : `Залишилось до бонусу: ${left} штамп(и).`;
 }
 renderStamps();
+
 $("#addStamp").onclick=()=>{
   const code = $("#stampCode").value.trim();
+  if(state.stamps >= DATA.loyalty.required){
+    alert("Спочатку використай безкоштовний напій (кнопка «Отримати…»).");
+    return;
+  }
   if(code===DATA.loyalty.secret){
     state.stamps++;
     localStorage.setItem("gc_stamps", String(state.stamps));
@@ -196,7 +155,39 @@ $("#addStamp").onclick=()=>{
     alert("Невірний код штампу.");
   }
 };
-/** ======= АКЦІЇ ======= **/
+
+$("#redeem").onclick=()=>{
+  if(state.stamps >= DATA.loyalty.required){
+    state.stamps = 0;
+    localStorage.setItem("gc_stamps", "0");
+    renderStamps();
+    alert("Насолоджуйся напоєм у подарунок! 🎉");
+  }
+};
+
+$("#reset").onclick=()=>{
+  if(confirm("Скинути лічильник штампів?")){
+    state.stamps=0; localStorage.setItem("gc_stamps","0"); renderStamps();
+  }
+};
+
+function renderMenu(){
+  const grid = $("#menuGrid"); grid.innerHTML="";
+  DATA.menu.forEach(item=>{
+    const el=document.createElement("div");
+    el.className="card";
+    el.innerHTML = `
+      <div class="badge">${item.tags.join(" • ")}</div>
+      <h3>${item.title}</h3>
+      <div class="price">${item.price} грн</div>
+      <div class="row">
+        <button class="cta" onclick="order('${item.id}')">Замовити</button>
+      </div>`;
+    grid.appendChild(el);
+  });
+}
+renderMenu();
+
 function renderPromos(){
   const pg = $("#promoGrid");
   pg.innerHTML="";
@@ -208,19 +199,22 @@ function renderPromos(){
   });
 }
 renderPromos();
-/** ======= ЗАМОВЛЕННЯ/ШЕРІНГ ======= **/
+
+function renderContacts(){
+  const loc = DATA.locations[0];
+  $("#locList").innerHTML = `<div class="muted">${loc.name}</div>`;
+  $("#tgOrder").href = loc.tg;
+  $("#maps").href = loc.maps;
+}
+renderContacts();
+
 function order(id){
   const item = DATA.menu.find(m=>m.id===id);
-  const loc = DATA.locations.find(l=>l.id===state.location);
+  const loc = DATA.locations[0];
   const msg = encodeURIComponent(`Замовлення: ${item.title} (${item.price} грн) • Локація: ${loc.name}`);
   window.open(loc.tg + (loc.tg.includes("?")?"&":"?") + "start=" + msg, "_blank");
 }
-function share(title){
-  const text = `Рекомендую ${title} у Guru Coffee!`;
-  if(navigator.share){ navigator.share({title:"Guru Coffee", text, url:location.href}); }
-  else { prompt("Скопіюй текст:", text+" "+location.href); }
-}
-/** ======= РЕЄСТРАЦІЯ SW ======= **/
+
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"));
 }
